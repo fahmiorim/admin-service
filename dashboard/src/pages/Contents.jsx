@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Database, RefreshCw, Search, Film, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Database, RefreshCw, Search, Film, CheckCircle, XCircle, Clock, AlertCircle, Trash2 } from 'lucide-react';
 import { api } from '../lib/api.js';
 
 const PLATFORMS = ['dramabox', 'reelshort', 'melolo', 'dramabite'];
@@ -44,6 +44,9 @@ export default function Contents() {
   const [platform, setPlatform] = useState('');
   const [page, setPage] = useState(0);
   const [selectedPlatforms, setSelectedPlatforms] = useState([]);
+  const [clearing, setClearing] = useState(false);
+  const [clearTarget, setClearTarget] = useState(null); // null=all, or platform string
+  const [showConfirm, setShowConfirm] = useState(false);
   const LIMIT = 20;
 
   const fetchStatus = useCallback(async () => {
@@ -94,11 +97,65 @@ export default function Contents() {
     );
   };
 
+  const confirmClear = (platform = null) => {
+    setClearTarget(platform);
+    setShowConfirm(true);
+  };
+
+  const handleClearContents = async () => {
+    setClearing(true);
+    setShowConfirm(false);
+    setSyncMsg('');
+    try {
+      const res = await api.clearContents(clearTarget || undefined);
+      const { deleted, platform: p } = res.data.data;
+      setSyncMsg(`${deleted} konten ${p === 'all' ? 'semua platform' : p} berhasil dihapus.`);
+      fetchContents();
+      fetchStatus();
+    } catch (e) {
+      setSyncMsg(e?.response?.data?.message || 'Gagal menghapus konten');
+    } finally {
+      setClearing(false);
+      setClearTarget(null);
+    }
+  };
+
   const stats = syncStatus?.stats || {};
   const totalCached = Object.values(stats).reduce((a, b) => a + b, 0);
 
   return (
     <div className="p-6 space-y-6">
+
+      {/* Confirm Dialog */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600"/>
+              </div>
+              <h3 className="font-semibold text-gray-900">Hapus Cache</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-5">
+              {clearTarget
+                ? `Hapus semua konten <strong>${clearTarget}</strong> dari database?`
+                : 'Hapus <strong>semua konten</strong> dari semua platform?'}
+              <br/><span className="text-red-500 font-medium">Tindakan ini tidak dapat dibatalkan.</span>
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">
+                Batal
+              </button>
+              <button onClick={handleClearContents}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Content Cache</h1>
@@ -110,6 +167,14 @@ export default function Contents() {
               <RefreshCw className="w-4 h-4 animate-spin"/> Sync berjalan...
             </span>
           )}
+          <button
+            onClick={() => confirmClear(null)}
+            disabled={clearing || syncing}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className={`w-4 h-4 ${clearing ? 'animate-spin' : ''}`}/>
+            {clearing ? 'Menghapus...' : 'Kosongkan Cache'}
+          </button>
           <button
             onClick={handleSync}
             disabled={syncing || syncStatus?.isSyncing}
@@ -136,23 +201,42 @@ export default function Contents() {
         ))}
       </div>
 
-      {/* Sync Platform Selector */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <p className="text-sm font-medium text-gray-700 mb-3">Sync platform tertentu (kosongkan = semua platform):</p>
-        <div className="flex flex-wrap gap-2">
-          {PLATFORMS.map(p => (
-            <button
-              key={p}
-              onClick={() => togglePlatform(p)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                selectedPlatforms.includes(p)
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+      {/* Sync & Clear per Platform */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-gray-700 mb-2">Sync per platform</p>
+          <p className="text-xs text-gray-400 mb-3">Pilih platform lalu klik Sync Sekarang. Kosongkan pilihan = sync semua.</p>
+          <div className="flex flex-wrap gap-2">
+            {PLATFORMS.map(p => (
+              <button
+                key={p}
+                onClick={() => togglePlatform(p)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                  selectedPlatforms.includes(p)
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="border-t border-gray-100 pt-4">
+          <p className="text-sm font-semibold text-gray-700 mb-2">Kosongkan cache per platform</p>
+          <p className="text-xs text-gray-400 mb-3">Hapus semua konten dari platform tertentu saja.</p>
+          <div className="flex flex-wrap gap-2">
+            {PLATFORMS.map(p => (
+              <button
+                key={p}
+                onClick={() => confirmClear(p)}
+                disabled={clearing}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5"/>{p}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

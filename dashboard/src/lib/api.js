@@ -68,6 +68,9 @@ export const api = {
   getContents: (params = {}) =>
     axios.get(`${BASE}/contents`, { headers: getHeaders(), params }),
 
+  clearContents: (platform) =>
+    axios.delete(`${BASE}/contents${platform ? `?platform=${platform}` : ''}`, { headers: getHeaders() }),
+
   getConfig: () =>
     axios.get(`${BASE}/config`, { headers: getHeaders() })
 };
