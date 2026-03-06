@@ -33,6 +33,36 @@ function SyncLogBadge({ status }) {
   return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 flex items-center gap-1 w-fit"><Clock className="w-3 h-3"/>Running</span>;
 }
 
+function PlatformSyncBadge({ platform, progress }) {
+  if (!progress) return null;
+  const { status, items, error } = progress;
+  if (status === 'running') {
+    return (
+      <div className="flex items-center gap-2 text-xs">
+        <RefreshCw className="w-3 h-3 animate-spin text-yellow-600"/>
+        <span className="text-yellow-600">{platform}: syncing...</span>
+      </div>
+    );
+  }
+  if (status === 'done') {
+    return (
+      <div className="flex items-center gap-2 text-xs">
+        <CheckCircle className="w-3 h-3 text-green-600"/>
+        <span className="text-green-600">{platform}: {items} items</span>
+      </div>
+    );
+  }
+  if (status === 'failed') {
+    return (
+      <div className="flex items-center gap-2 text-xs">
+        <XCircle className="w-3 h-3 text-red-600"/>
+        <span className="text-red-600">{platform}: failed</span>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function Contents() {
   const [syncStatus, setSyncStatus] = useState(null);
   const [contents, setContents] = useState([]);
@@ -83,7 +113,14 @@ export default function Contents() {
       const platforms = selectedPlatforms.length > 0 ? selectedPlatforms : undefined;
       await api.triggerSync(platforms);
       setSyncMsg('Sync dimulai! Cek status di bawah.');
-      setTimeout(() => { fetchStatus(); fetchContents(); }, 3000);
+      // Poll status every 2 seconds for 30 seconds
+      let polls = 0;
+      const interval = setInterval(() => {
+        fetchStatus();
+        fetchContents();
+        polls++;
+        if (polls >= 15) clearInterval(interval);
+      }, 2000);
     } catch (e) {
       setSyncMsg(e?.response?.data?.message || 'Sync gagal dimulai');
     } finally {
@@ -238,6 +275,15 @@ export default function Contents() {
             ))}
           </div>
         </div>
+        {/* Real-time sync progress */}
+        {syncStatus?.progress && Object.entries(syncStatus.progress).length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
+            <p className="text-xs font-medium text-gray-600">Progress:</p>
+            {PLATFORMS.map(p => (
+              <PlatformSyncBadge key={p} platform={p} progress={syncStatus.progress[p]} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Sync Logs */}
