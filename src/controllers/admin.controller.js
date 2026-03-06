@@ -46,7 +46,39 @@ export const getAdminAnalytics = async (req, res, next) => {
   try {
     const days = parseInt(req.query.days) || 7;
     const logs = await adminSupabase.getAnalytics({ days });
-    res.json(createSuccessResponse(logs, 'Analytics retrieved'));
+
+    // Build daily buckets
+    const buckets = {};
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      buckets[key] = { date: key, requests: 0, success: 0, error: 0 };
+    }
+
+    let total = 0;
+    let successCount = 0;
+    const endpointMap = {};
+
+    for (const log of logs) {
+      const key = (log.created_at || '').slice(0, 10);
+      if (buckets[key]) {
+        buckets[key].requests++;
+        if ((log.status_code || 200) < 400) { buckets[key].success++; successCount++; }
+        else buckets[key].error++;
+      }
+      total++;
+      const ep = log.endpoint || 'unknown';
+      endpointMap[ep] = (endpointMap[ep] || 0) + 1;
+    }
+
+    const daily = Object.values(buckets);
+    const successRate = total > 0 ? Math.round((successCount / total) * 100) : 100;
+    const byEndpoint = Object.entries(endpointMap)
+      .map(([endpoint, count]) => ({ endpoint, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    res.json(createSuccessResponse({ total, successRate, daily, byEndpoint }, 'Analytics retrieved'));
   } catch (error) { next(error); }
 };
 
