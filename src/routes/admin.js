@@ -18,6 +18,7 @@ import {
   triggerSync,
   getSyncStatusController,
   getContents,
+  clearContents,
   getAdminConfig
 } from '../controllers/admin.controller.js';
 
@@ -50,5 +51,6 @@ router.get('/clients/:clientId/stats', getClientStats);
 router.post('/sync', triggerSync);
 router.get('/sync/status', getSyncStatusController);
 router.get('/contents', getContents);
+router.delete('/contents', clearContents);
 
 export default router;

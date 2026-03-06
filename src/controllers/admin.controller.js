@@ -284,6 +284,21 @@ export const getContents = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+export const clearContents = async (req, res, next) => {
+  try {
+    const { platform } = req.query;
+    const VALID = ['dramabox', 'reelshort', 'melolo', 'dramabite'];
+    if (platform && !VALID.includes(platform)) {
+      return res.status(400).json({ success: false, message: `Platform tidak valid. Gunakan: ${VALID.join(', ')}` });
+    }
+    const deleted = await adminSupabase.deleteAllContents(platform || null);
+    res.json(createSuccessResponse(
+      { deleted, platform: platform || 'all' },
+      platform ? `${deleted} konten ${platform} dihapus` : `${deleted} konten dihapus`
+    ));
+  } catch (error) { next(error); }
+};
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const INTERNAL_DOCS_PATH = '/ref-drc-x7k2m9q4bz';
