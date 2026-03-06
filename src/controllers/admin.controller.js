@@ -286,8 +286,10 @@ export const getContents = async (req, res, next) => {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+const INTERNAL_DOCS_PATH = '/ref-drc-x7k2m9q4bz';
+
 export const getAdminConfig = (req, res) => {
   const gatewayUrl = process.env.GATEWAY_URL || 'http://localhost:3000';
-  const docsUrl = `${gatewayUrl}${config.internalDocsPath}?api_key=${config.adminApiKey}`;
-  res.json(createSuccessResponse({ internalDocsPath: config.internalDocsPath, docsUrl }, 'Config retrieved'));
+  const docsUrl = `${gatewayUrl}${INTERNAL_DOCS_PATH}?api_key=${config.adminApiKey}`;
+  res.json(createSuccessResponse({ internalDocsPath: INTERNAL_DOCS_PATH, docsUrl }, 'Config retrieved'));
 };

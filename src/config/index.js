@@ -15,8 +15,7 @@ export const config = {
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_ANON_KEY
   },
-  adminApiKey: process.env.ADMIN_API_KEY,
-  internalDocsPath: process.env.INTERNAL_DOCS_PATH || '/internal-ref-change-me'
+  adminApiKey: process.env.ADMIN_API_KEY
 };
 
 export const isDevelopment = config.nodeEnv === 'development';
