@@ -287,6 +287,7 @@ export const getContents = async (req, res, next) => {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 export const getAdminConfig = (req, res) => {
-  const docsUrl = `${config.internalDocsPath}?api_key=${config.adminApiKey}`;
+  const gatewayUrl = process.env.GATEWAY_URL || 'http://localhost:3000';
+  const docsUrl = `${gatewayUrl}${config.internalDocsPath}?api_key=${config.adminApiKey}`;
   res.json(createSuccessResponse({ internalDocsPath: config.internalDocsPath, docsUrl }, 'Config retrieved'));
 };
